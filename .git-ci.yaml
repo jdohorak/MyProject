@@ -1,0 +1,4 @@
+job-to-run-the-code:
+    script: 
+         - python hello.py
+         
