@@ -1,1 +1,20 @@
- 
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "myproject-chatbot"
+version = "0.1.0"
+description = "Általános kérdésekre válaszoló chatbot a Claude API-ra építve"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["anthropic>=1.0"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+chatbot = "chatbot.cli:main"
+
+[tool.setuptools]
+packages = ["chatbot"]
