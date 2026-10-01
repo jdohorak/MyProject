@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kérdezz bármit</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23c4613b'/%3E%3Cpath d='M8 10h16v10H14l-4 4v-4H8z' fill='white'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --text: #1f1f1d;
+    --muted: #6b6b66;
+    --border: #e3e2dd;
+    --accent: #c4613b;
+    --accent-text: #ffffff;
+    --user-bubble: #efeee9;
+    --code-bg: #f0efea;
+    --error: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1b;
+      --surface: #262624;
+      --text: #ecebe6;
+      --muted: #a09f99;
+      --border: #3a3a37;
+      --accent: #d97757;
+      --accent-text: #1c1c1b;
+      --user-bubble: #31312e;
+      --code-bg: #30302d;
+      --error: #f2b8b5;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  button {
+    font: inherit;
+    cursor: pointer;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    padding: 6px 12px;
+  }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button:disabled { opacity: .5; cursor: default; }
+  main { flex: 1; overflow-y: auto; }
+  #messages {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .msg { overflow-wrap: anywhere; }
+  .msg.user {
+    align-self: flex-end;
+    max-width: 85%;
+    background: var(--user-bubble);
+    padding: 10px 14px;
+    border-radius: 14px;
+    white-space: pre-wrap;
+  }
+  .msg.bot > :first-child { margin-top: 0; }
+  .msg.bot > :last-child { margin-bottom: 0; }
+  .msg.bot pre {
+    background: var(--code-bg);
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  .msg.bot code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .92em; }
+  .msg.bot :not(pre) > code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  .msg.bot a { color: var(--accent); }
+  .msg.error { color: var(--error); font-size: 15px; }
+  .typing::after {
+    content: "▍";
+    animation: blink 1s steps(1) infinite;
+    color: var(--muted);
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  #welcome { text-align: center; color: var(--muted); padding-top: 8vh; }
+  #welcome h2 { color: var(--text); font-weight: 600; margin: 0 0 6px; }
+  .examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .examples button { border-radius: 999px; font-size: 14px; color: var(--muted); }
+  footer { padding: 8px 16px 16px; }
+  form {
+    max-width: 760px;
+    margin: 0 auto;
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 8px;
+  }
+  form:focus-within { border-color: var(--muted); }
+  textarea {
+    flex: 1;
+    resize: none;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    padding: 6px 8px;
+    max-height: 200px;
+  }
+  #send { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .hint { max-width: 760px; margin: 6px auto 0; font-size: 12px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Kérdezz bármit</h1>
+  <button id="reset" type="button">Új beszélgetés</button>
+</header>
+<main id="scroller">
+  <div id="messages">
+    <div id="welcome">
+      <h2>Miben segíthetek?</h2>
+      <div>Tegyél fel bármilyen általános kérdést.</div>
+      <div class="examples">
+        <button type="button">Miért kék az ég?</button>
+        <button type="button">Hogyan működik a kamatos kamat?</button>
+        <button type="button">Mikor volt a mohácsi csata?</button>
+        <button type="button">Adj tippeket a jobb alváshoz</button>
+      </div>
+    </div>
+  </div>
+</main>
+<footer>
+  <form id="form">
+    <textarea id="input" rows="1" placeholder="Írd ide a kérdésed…" autofocus></textarea>
+    <button id="send" type="submit">Küldés</button>
+  </form>
+  <div class="hint">Enter: küldés · Shift+Enter: új sor. A válaszok tévedhetnek, a fontos dolgoknak nézz utána.</div>
+</footer>
+<script>
+  const messages = document.getElementById("messages");
+  const scroller = document.getElementById("scroller");
+  const form = document.getElementById("form");
+  const input = document.getElementById("input");
+  const sendBtn = document.getElementById("send");
+  const resetBtn = document.getElementById("reset");
+  const welcome = document.getElementById("welcome");
+
+  // Egyszerű, biztonságos Markdown-megjelenítő: először minden HTML-t escape-elünk,
+  // így a modell válaszából semmilyen nyers HTML nem kerülhet az oldalba.
+  function escapeHtml(text) {
+    return text.replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    })[c]);
+  }
+
+  function inline(text) {
+    const codes = [];
+    text = text.replace(/`([^`]+)`/g, (_, code) => {
+      codes.push(code);
+      return "\u0000" + (codes.length - 1) + "\u0000";
+    });
+    text = text
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/__(.+?)__/g, "<strong>$1</strong>")
+      .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, "$1<em>$2</em>")
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    return text.replace(/\u0000(\d+)\u0000/g, (_, i) => "<code>" + codes[i] + "</code>");
+  }
+
+  function renderMarkdown(source) {
+    const lines = escapeHtml(source).split("\n");
+    const out = [];
+    let list = null;
+    let paragraph = [];
+
+    const flushParagraph = () => {
+      if (paragraph.length) out.push("<p>" + inline(paragraph.join("<br>")) + "</p>");
+      paragraph = [];
+    };
+    const closeList = () => {
+      if (list) out.push("</" + list + ">");
+      list = null;
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      let m;
+      if (line.trimStart().startsWith("```")) {
+        flushParagraph();
+        closeList();
+        const code = [];
+        while (++i < lines.length && !lines[i].trimStart().startsWith("```")) code.push(lines[i]);
+        out.push("<pre><code>" + code.join("\n") + "</code></pre>");
+      } else if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
+        flushParagraph();
+        closeList();
+        const level = Math.min(m[1].length + 2, 6);
+        out.push("<h" + level + ">" + inline(m[2]) + "</h" + level + ">");
+      } else if ((m = line.match(/^\s*[-*+]\s+(.*)$/)) || (m = line.match(/^\s*\d+[.)]\s+(.*)$/))) {
+        flushParagraph();
+        const type = /^\s*\d/.test(line) ? "ol" : "ul";
+        if (list !== type) {
+          closeList();
+          out.push("<" + type + ">");
+          list = type;
+        }
+        out.push("<li>" + inline(m[1]) + "</li>");
+      } else if (!line.trim()) {
+        flushParagraph();
+        closeList();
+      } else {
+        closeList();
+        paragraph.push(line);
+      }
+    }
+    flushParagraph();
+    closeList();
+    return out.join("");
+  }
+
+  let controller = null;
+
+  function addMessage(cls, text) {
+    welcome.hidden = true;
+    const el = document.createElement("div");
+    el.className = "msg " + cls;
+    el.textContent = text || "";
+    messages.appendChild(el);
+    scrollToBottom();
+    return el;
+  }
+
+  function renderBot(el, text) {
+    el.innerHTML = renderMarkdown(text);
+  }
+
+  function scrollToBottom() {
+    scroller.scrollTop = scroller.scrollHeight;
+  }
+
+  function setBusy(busy) {
+    sendBtn.textContent = busy ? "Leállítás" : "Küldés";
+    input.disabled = busy;
+    if (!busy) input.focus();
+  }
+
+  function autosize() {
+    input.style.height = "auto";
+    input.style.height = input.scrollHeight + "px";
+  }
+
+  async function send(text) {
+    addMessage("user", text);
+    const botEl = addMessage("bot typing");
+    let answer = "";
+    controller = new AbortController();
+    setBusy(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Hiba történt (" + res.status + ").");
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line) continue;
+          const event = JSON.parse(line);
+          if (event.text) {
+            answer += event.text;
+            renderBot(botEl, answer);
+            scrollToBottom();
+          } else if (event.error) {
+            throw new Error(event.error);
+          }
+        }
+      }
+    } catch (err) {
+      if (err.name === "AbortError") {
+        addMessage("error", "A válasz leállítva.");
+      } else {
+        addMessage("error", err.message || "Hálózati hiba.");
+      }
+      if (!answer) botEl.remove();
+    } finally {
+      botEl.classList.remove("typing");
+      controller = null;
+      setBusy(false);
+    }
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (controller) {
+      controller.abort();
+      return;
+    }
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    autosize();
+    send(text);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+  input.addEventListener("input", autosize);
+
+  document.querySelectorAll(".examples button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!controller) send(btn.textContent);
+    });
+  });
+
+  resetBtn.addEventListener("click", async () => {
+    if (controller) controller.abort();
+    await fetch("/api/reset", { method: "POST" }).catch(() => {});
+    messages.querySelectorAll(".msg").forEach((el) => el.remove());
+    welcome.hidden = false;
+    input.focus();
+  });
+</script>
+</body>
+</html>
