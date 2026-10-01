@@ -11,10 +11,15 @@ requires-python = ">=3.10"
 dependencies = ["anthropic>=1.0"]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+web = ["flask>=3.0"]
+dev = ["pytest", "flask>=3.0"]
 
 [project.scripts]
 chatbot = "chatbot.cli:main"
+chatbot-web = "chatbot.web:main"
 
 [tool.setuptools]
 packages = ["chatbot"]
+
+[tool.setuptools.package-data]
+chatbot = ["static/*"]
